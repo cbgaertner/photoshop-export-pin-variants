@@ -269,6 +269,30 @@
 		}
 	}
 	
+	function isLayerSetLocked(layerSet) {
+		/**
+		 * Erkennt, ob eine Gruppe (LayerSet) gesperrt ist.
+		 * Je nach Photoshop-Version gibt es allLocked und/oder locked.
+		 */
+		try {
+			if (layerSet.allLocked === true) {
+				return true;
+			}
+		} catch (e) {
+			// ignore
+		}
+
+		try {
+			if (layerSet.locked === true) {
+				return true;
+			}
+		} catch (e2) {
+			// ignore
+		}
+
+		return false;
+	}
+	
 	// =====================================================================
 	// Hauptlogik
 	// =====================================================================
@@ -310,6 +334,10 @@
 		// 1) Jede Bilder-Untergruppe
 		for (var b = 0; b < imagesGroup.layerSets.length; b++) {
 			var imageSubGroup = imagesGroup.layerSets[b];
+			
+			if (isLayerSetLocked(imageSubGroup)) {
+				continue;
+			}
 
 			var imageNumber = parseImageNumberFromGroupName(imageSubGroup.name);
 			if (imageNumber === null) {
@@ -326,6 +354,11 @@
 			// 2) Für diese Bilder-Untergruppe: alle Varianten-Gruppen
 			for (var v = 0; v < variantsGroup.layerSets.length; v++) {
 				var variantSubGroup = variantsGroup.layerSets[v];
+				
+				if (isLayerSetLocked(variantSubGroup)) {
+					continue;
+				}
+				
 				var rangeInfo = parseVariantGroupName(variantSubGroup.name);
 				if (!rangeInfo) {
 					continue;
