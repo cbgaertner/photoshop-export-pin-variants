@@ -157,11 +157,32 @@
 
 	function setTextLayersColor(textLayers, rgbArr) {
 		var c = makeSolidColor(rgbArr);
+
 		for (var i = 0; i < textLayers.length; i++) {
+			var layer = textLayers[i];
+
+			// Ausgangs-Bounds merken
+			var beforeBounds = null;
 			try {
-				textLayers[i].textItem.color = c;
-			} catch (e) {
-				// ignorieren
+				beforeBounds = getLayerBoundsPx(layer);
+			} catch (e0) {
+				beforeBounds = null;
+			}
+
+			// Farbe setzen
+			try {
+				layer.textItem.color = c;
+			} catch (e1) {
+				continue;
+			}
+
+			// Falls Photoshop den Absatztext-Layer verschoben hat: zurückschieben
+			if (beforeBounds) {
+				try {
+					translateLayerToMatchTopLeft(layer, beforeBounds);
+				} catch (e2) {
+					// ignorieren
+				}
 			}
 		}
 	}
@@ -293,6 +314,34 @@
 		return false;
 	}
 	
+	function getLayerBoundsPx(layer) {
+		/**
+		 * Liefert Bounds als Pixelzahlen: { left, top, right, bottom }.
+		 * bounds sind UnitValues -> wir nehmen .as("px").
+		 */
+		var b = layer.bounds;
+		return {
+			left: b[0].as("px"),
+			top: b[1].as("px"),
+			right: b[2].as("px"),
+			bottom: b[3].as("px")
+		};
+	}
+
+	function translateLayerToMatchTopLeft(layer, targetBoundsPx) {
+		/**
+		 * Verschiebt den Layer so, dass sein aktuelles Top/Left wieder targetBoundsPx entspricht.
+		 * Nutzt translate(), damit es unabhängig von Text-Engine/Eigenschaften funktioniert.
+		 */
+		var current = getLayerBoundsPx(layer);
+		var dx = targetBoundsPx.left - current.left;
+		var dy = targetBoundsPx.top - current.top;
+
+		if (dx !== 0 || dy !== 0) {
+			layer.translate(dx, dy);
+		}
+	}
+	
 	// =====================================================================
 	// Hauptlogik
 	// =====================================================================
@@ -392,7 +441,7 @@
 					try {
 						setOverlayColor(overlay, overlayRgb);
 						setTextLayersColor(textLayers, textRgb);
-
+						
 						exportJpg(fullFile, JPG_QUALITY);
 
 					} finally {
